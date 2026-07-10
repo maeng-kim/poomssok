@@ -1,0 +1,484 @@
+<title>사심가득가득</title>
+<style>
+  :root{
+    color-scheme: dark;
+    --bg:#111318; --panel:#1b1e27; --accent:#ff8a5c; --text:#f2f2f5; --muted:#9aa0ac;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    padding:10px 16px 10px;
+  }
+  .app{max-width:640px;margin:0 auto;}
+  h1{font-size:22px;margin:0 0 4px;}
+  h1 + p{color:var(--muted);margin-top:0;font-size:14px;}
+  .panel{
+    background:var(--panel); border-radius:16px; padding:18px;
+    margin-bottom:18px; border:1px solid #2a2e3a;
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  }
+  .picker{
+    background:var(--accent); color:#1b1200; border:none; border-radius:10px;
+    padding:10px 16px; font-size:14px; font-weight:600; cursor:pointer; display:inline-block;
+  }
+  .stage{
+    position:relative; width:100%; max-width:640px; margin:0 auto;
+    border-radius:14px; overflow:hidden; background:#000; aspect-ratio:4/3;
+  }
+  .stage[hidden]{display:none;}
+  .stage video{display:none;}
+  .stage canvas{width:100%; height:100%; display:block;}
+  .status{color:var(--muted); font-size:13px; margin:0;}
+</style>
+
+<div class="app">
+  <h1>내사심가득채워만들엇다.</h1>
+  <p>왜요나도안겨보고싶엇다구요.</p>
+
+  <div class="panel">
+    <label class="picker" for="fileInput">이미지 선택</label>
+    <input type="file" id="fileInput" accept="image/*" hidden>
+    <input type="text" id="nameInput" maxlength="2" placeholder="이름 2글자" style="width:90px;padding:10px 12px;border-radius:10px;border:1px solid #2a2e3a;background:#12141b;color:var(--text);font-size:14px;">
+    <p class="status" id="pickStatus"></p>
+  </div>
+
+  <div class="stage" id="stage" hidden>
+    <video id="video" playsinline autoplay muted></video>
+    <canvas id="output"></canvas>
+  </div>
+  <p class="status" id="status"></p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+
+<script>
+(function(){
+  // fixed defaults for what used to be manual controls
+  const FLIP_SIDE = false;
+  const ARM_WIDTH = 34;
+  const ARM_COLOR = '#e0a15c';
+  const SHOW_DEBUG = false;
+  const USE_OCCLUSION = true;
+
+  const fileInput = document.getElementById('fileInput');
+  const nameInput = document.getElementById('nameInput');
+  let userName = '';
+  nameInput.addEventListener('input', ()=>{ userName = nameInput.value.slice(0,2); });
+  const pickStatusEl = document.getElementById('pickStatus');
+  const stage = document.getElementById('stage');
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('output');
+  const ctx = canvas.getContext('2d');
+  const statusEl = document.getElementById('status');
+
+  function setPickStatus(msg){ pickStatusEl.textContent = msg; }
+  function setStatus(msg){ statusEl.textContent = msg; }
+
+  // offscreen canvas used to mask "just the person" out of the video frame via
+  // MediaPipe's segmentation mask, so drawings can be layered behind AND in front of them
+  const maskCanvas = document.createElement('canvas');
+  const maskCtx = maskCanvas.getContext('2d');
+
+  let faceTexture = null; // offscreen canvas with the cutout face (transparent outside the oval)
+  let camera = null;
+  let sized = false;
+  let smoothedAngle = 0;
+  let faceDetection = null;
+
+  function getFaceDetection(){
+    if(faceDetection) return faceDetection;
+    faceDetection = new FaceDetection({locateFile:(f)=>`https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${f}`});
+    faceDetection.setOptions({ model: 'short', minDetectionConfidence: 0.5 });
+    return faceDetection;
+  }
+
+  let selfieSeg = null;
+  function getSelfieSeg(){
+    if(selfieSeg) return selfieSeg;
+    selfieSeg = new SelfieSegmentation({locateFile:(f)=>`https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${f}`});
+    selfieSeg.setOptions({ modelSelection: 1 });
+    return selfieSeg;
+  }
+
+  // strips the background out of the whole source image (keeps only the person/hair),
+  // so that even inside the crop oval, any background peeking through gets removed too
+  function removeBackground(img){
+    return new Promise((resolve)=>{
+      const seg = getSelfieSeg();
+      seg.onResults((results)=>{
+        const full = document.createElement('canvas');
+        full.width = img.naturalWidth; full.height = img.naturalHeight;
+        const fctx = full.getContext('2d');
+        fctx.drawImage(img, 0, 0, full.width, full.height);
+        fctx.globalCompositeOperation = 'destination-in';
+        fctx.drawImage(results.segmentationMask, 0, 0, full.width, full.height);
+        fctx.globalCompositeOperation = 'source-over';
+        resolve(full);
+      });
+      seg.send({image: img});
+    });
+  }
+
+  function buildFaceTexture(img, cx, cy, rx, ry){
+    const OUT = 320;
+    const outH = Math.round(OUT * (ry/rx));
+    const c = document.createElement('canvas');
+    c.width = OUT; c.height = outH;
+    const cctx = c.getContext('2d');
+    cctx.save();
+    cctx.beginPath();
+    cctx.ellipse(OUT/2, outH/2, OUT/2, outH/2, 0, 0, Math.PI*2);
+    cctx.clip();
+    cctx.drawImage(img, cx-rx, cy-ry, rx*2, ry*2, 0, 0, OUT, outH);
+    cctx.restore();
+    return c;
+  }
+
+  fileInput.addEventListener('change', async ()=>{
+    const f = fileInput.files[0];
+    if(!f) return;
+    setPickStatus('얼굴을 찾는 중...');
+
+    const img = new Image();
+    img.src = URL.createObjectURL(f);
+    try{
+      await new Promise((resolve, reject)=>{ img.onload = resolve; img.onerror = reject; });
+    }catch(err){
+      setPickStatus('이미지를 불러오지 못했어요. 다른 파일을 선택해주세요.');
+      return;
+    }
+
+    let box = null;
+    try{
+      const fd = getFaceDetection();
+      box = await new Promise((resolve)=>{
+        fd.onResults((results)=>{
+          resolve(results.detections && results.detections.length ? results.detections[0].boundingBox : null);
+        });
+        fd.send({image: img});
+      });
+    }catch(err){
+      console.error(err);
+    }
+
+    let cx, cy, rx, ry;
+    if(box){
+      const bw = box.width*img.naturalWidth, bh = box.height*img.naturalHeight;
+      cx = box.xCenter*img.naturalWidth;
+      cy = box.yCenter*img.naturalHeight - bh*0.15; // nudge up a bit to include more forehead
+      rx = bw*0.85;
+      ry = bh*1.0;
+    } else {
+      // no face found - fall back to a centered upper-portion crop
+      cx = img.naturalWidth*0.5;
+      cy = img.naturalHeight*0.38;
+      rx = img.naturalWidth*0.28;
+      ry = img.naturalHeight*0.28;
+    }
+
+    setPickStatus('배경 지우는 중...');
+    let source = img;
+    try{
+      source = await removeBackground(img);
+    }catch(err){
+      console.error(err);
+    }
+
+    faceTexture = buildFaceTexture(source, cx, cy, rx, ry);
+    setPickStatus('');
+    stage.hidden = false;
+    startCamera();
+  });
+
+  async function startCamera(){
+    if(camera) return;
+    setStatus('카메라 및 모델 로딩 중...');
+    try{
+      const pose = new Pose({locateFile:(f)=>`https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`});
+      pose.setOptions({
+        modelComplexity: 1,
+        smoothLandmarks: true,
+        enableSegmentation: true,
+        smoothSegmentation: true,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5
+      });
+      pose.onResults(onPoseResults);
+
+      camera = new Camera(video, {
+        onFrame: async () => { await pose.send({image: video}); },
+        width: 960,
+        height: 720
+      });
+      await camera.start();
+      setStatus('');
+    }catch(err){
+      console.error(err);
+      setStatus('웹캠을 시작하지 못했어요: ' + err.message);
+      camera = null;
+    }
+  }
+
+  function pt(landmarks, i, w, h){
+    const l = landmarks[i];
+    return { x: l.x*w, y: l.y*h, v: l.visibility||0 };
+  }
+  function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+  function mid(a,b){ return {x:(a.x+b.x)/2, y:(a.y+b.y)/2}; }
+
+  // light extra smoothing on top of MediaPipe's own smoothing, keyed by landmark index
+  const smoothed = {};
+  function smooth(i, p, alpha){
+    const prev = smoothed[i];
+    if(!prev){ smoothed[i] = p; return p; }
+    const s = { x: prev.x + (p.x-prev.x)*alpha, y: prev.y + (p.y-prev.y)*alpha, v: p.v };
+    smoothed[i] = s;
+    return s;
+  }
+
+  function drawDebugPoint(p, color){
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 7, 0, Math.PI*2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#000';
+    ctx.stroke();
+  }
+
+  // a tapered "sleeve" segment between two joints (wide at r0, narrower at r1) - flat
+  // fill only, no shading, to match the flat-illustration torso style
+  function drawTaperedSegment(p0, r0, p1, r1, color){
+    const dx = p1.x-p0.x, dy = p1.y-p0.y;
+    const len = Math.hypot(dx,dy) || 1;
+    const px = -dy/len, py = dx/len; // unit vector perpendicular to the segment
+
+    ctx.beginPath();
+    ctx.moveTo(p0.x+px*r0, p0.y+py*r0);
+    ctx.lineTo(p1.x+px*r1, p1.y+py*r1);
+    ctx.lineTo(p1.x-px*r1, p1.y-py*r1);
+    ctx.lineTo(p0.x-px*r0, p0.y-py*r0);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.beginPath(); ctx.arc(p0.x, p0.y, r0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(p1.x, p1.y, r1, 0, Math.PI*2); ctx.fill();
+  }
+
+  // a simple hand: a palm blob plus a few curled "finger" strokes, oriented along the forearm
+  function drawHand(wrist, fromPt, size, color){
+    const angle = Math.atan2(wrist.y-fromPt.y, wrist.x-fromPt.x);
+    ctx.save();
+    ctx.translate(wrist.x, wrist.y);
+    ctx.rotate(angle);
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.ellipse(size*0.25, 0, size*0.95, size*0.62, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = size*0.3;
+    ctx.lineCap = 'round';
+    for(let i=-1;i<=1;i++){
+      ctx.beginPath();
+      ctx.moveTo(size*0.85, i*size*0.32);
+      ctx.quadraticCurveTo(size*1.5, i*size*0.36, size*1.25, i*size*0.2 + size*0.55);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // simple flat-illustration torso: a rounded "dome" shoulder line on top, straight sides below
+  function drawDomeTorso(cx, topY, w, h, color){
+    const r = w/2;
+    ctx.beginPath();
+    ctx.moveTo(cx - r, topY + r);
+    ctx.arc(cx, topY + r, r, Math.PI, 0, false);
+    ctx.lineTo(cx + r, topY + h);
+    ctx.lineTo(cx - r, topY + h);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+
+  function onPoseResults(results){
+    if(!sized && results.image && results.image.width){
+      canvas.width = results.image.width;
+      canvas.height = results.image.height;
+      sized = true;
+    }
+    const w = canvas.width, h = canvas.height;
+    if(!w || !h) return;
+
+    ctx.save();
+    ctx.clearRect(0,0,w,h);
+    ctx.translate(w,0);
+    ctx.scale(-1,1);
+    ctx.drawImage(results.image, 0,0,w,h);
+
+    const lm = results.poseLandmarks;
+    if(lm){
+      const rawShoulderL = pt(lm,11,w,h), rawShoulderR = pt(lm,12,w,h);
+      const rawEarL = pt(lm,7,w,h), rawEarR = pt(lm,8,w,h);
+      const rawNose = pt(lm,0,w,h);
+      const shoulderL = smooth(11, rawShoulderL, 0.28);
+      const shoulderR = smooth(12, rawShoulderR, 0.28);
+      const earL = smooth(7, rawEarL, 0.28);
+      const earR = smooth(8, rawEarR, 0.28);
+      const nose = smooth(0, rawNose, 0.28);
+
+      const okShoulders = rawShoulderL.v>0.35 && rawShoulderR.v>0.35;
+      const okEars = rawEarL.v>0.3 && rawEarR.v>0.3;
+      const okNose = rawNose.v>0.3;
+
+      if(SHOW_DEBUG){
+        drawDebugPoint(shoulderL, '#00e5ff');
+        drawDebugPoint(shoulderR, '#00e5ff');
+        drawDebugPoint(earL, '#ff4dff');
+        drawDebugPoint(earR, '#ff4dff');
+      }
+
+      if(okShoulders && faceTexture && okEars && okNose){
+        setStatus('');
+        const shoulderDist = dist(shoulderL, shoulderR);
+        const shoulderMid = mid(shoulderL, shoulderR);
+        const armColor = ARM_COLOR;
+
+        const flip = FLIP_SIDE;
+        const anchorShoulder = flip ? shoulderL : shoulderR;
+        const anchorEar = flip ? earL : earR;
+        const targetShoulder = flip ? shoulderR : shoulderL;
+
+        const earDist = dist(earL, earR);
+        const headW = earDist * 1.35;
+        const faceW = headW * 1.2;
+        const faceH = faceW * (faceTexture.height / faceTexture.width);
+
+        const outwardDir = (anchorEar.x - shoulderMid.x) >= 0 ? 1 : -1;
+        const faceCx = anchorEar.x + outwardDir*faceW*0.6;
+        const faceCy = nose.y - faceH*0.28;
+
+        const torsoW = faceW * 1.3;
+        const torsoH = faceH * 0.95;
+        const torsoTopY = faceH*0.32;
+        const torsoLocalX = outwardDir * torsoW*0.2;
+
+        const rawAngle = Math.atan2(shoulderR.y - shoulderL.y, shoulderR.x - shoulderL.x);
+        smoothedAngle += (rawAngle - smoothedAngle) * 0.03;
+        const clamped = Math.max(-0.2, Math.min(0.2, smoothedAngle));
+        const baseTilt = flip ? 0.16 : -0.16;
+        const angle = baseTilt + clamped*0.35;
+
+        const useOcclusion = USE_OCCLUSION && !!results.segmentationMask;
+
+        const armWidth = ARM_WIDTH * (shoulderDist/220);
+        const armShoulder = {
+          x: faceCx + torsoLocalX - outwardDir*torsoW*0.4,
+          y: faceCy + torsoTopY + torsoH*0.35
+        };
+        const armHand = {
+          x: targetShoulder.x,
+          y: targetShoulder.y - shoulderDist*0.05
+        };
+        const armElbow = {
+          x: (armShoulder.x + armHand.x)/2,
+          y: Math.min(armShoulder.y, armHand.y) - shoulderDist*0.28
+        };
+
+        ctx.save();
+        ctx.translate(faceCx, faceCy);
+        ctx.rotate(angle);
+        drawDomeTorso(torsoLocalX, torsoTopY, torsoW, torsoH, armColor);
+        ctx.shadowColor = 'rgba(0,0,0,0.4)';
+        ctx.shadowBlur = 20;
+        ctx.shadowOffsetY = 6;
+        ctx.drawImage(faceTexture, -faceW/2, -faceH/2, faceW, faceH);
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
+
+        if(userName){
+          const fontSize = Math.round(torsoW*0.18);
+          const lineGap = fontSize*1.15;
+          // centered on the torso itself, sitting below the face, nudged toward the outer edge
+          const outwardPadding = torsoW*0.18; // increase to push the text further outward
+          const labelX = torsoLocalX + outwardDir*outwardPadding;
+          const labelY = faceH*0.5 + (torsoTopY + torsoH - faceH*0.5)*0.55;
+          ctx.save();
+          ctx.translate(labelX, labelY);
+          ctx.scale(-1, 1); // undo the outer mirror so glyphs read correctly
+          ctx.font = `bold ${fontSize}px -apple-system, "Apple SD Gothic Neo", sans-serif`;
+          ctx.textBaseline = 'middle';
+
+          // line 1: "I" in white + a red heart, centered together
+          const iPart = 'I ';
+          const heartPart = '❤';
+          const iWidth = ctx.measureText(iPart).width;
+          const heartWidth = ctx.measureText(heartPart).width;
+          const line1Width = iWidth + heartWidth;
+          ctx.textAlign = 'left';
+          ctx.fillStyle = '#ffffff';
+          ctx.fillText(iPart, -line1Width/2, -lineGap/2);
+          ctx.fillStyle = '#ff2d2d';
+          ctx.fillText(heartPart, -line1Width/2 + iWidth, -lineGap/2);
+
+          // line 2: the username, centered
+          ctx.textAlign = 'center';
+          ctx.fillStyle = '#ffffff';
+          ctx.fillText(userName, 0, lineGap/2);
+          ctx.restore();
+        }
+
+        ctx.restore();
+
+        drawTaperedSegment(armShoulder, armWidth*0.5, armElbow, armWidth*0.4, armColor);
+        drawTaperedSegment(armElbow, armWidth*0.4, armHand, armWidth*0.32, armColor);
+        drawHand(armHand, armElbow, armWidth*0.85, armColor);
+
+        if(useOcclusion){
+          if(maskCanvas.width !== w || maskCanvas.height !== h){
+            maskCanvas.width = w; maskCanvas.height = h;
+          }
+          maskCtx.clearRect(0,0,w,h);
+          maskCtx.drawImage(results.image, 0,0,w,h);
+          maskCtx.globalCompositeOperation = 'destination-in';
+          maskCtx.drawImage(results.segmentationMask, 0,0,w,h);
+          maskCtx.globalCompositeOperation = 'source-over';
+          ctx.drawImage(maskCanvas, 0,0,w,h);
+        }
+
+        const frontConnect = {
+          x: targetShoulder.x,
+          y: targetShoulder.y - shoulderDist*0.05
+        };
+        const frontHand = {
+          x: frontConnect.x + outwardDir*shoulderDist*0.345,
+          y: frontConnect.y + shoulderDist*0.1725
+        };
+        drawTaperedSegment(frontConnect, armWidth*0.45, frontHand, armWidth*0.32, armColor);
+        drawHand(frontHand, frontConnect, armWidth*0.85, armColor);
+
+        if(SHOW_DEBUG){
+          drawDebugPoint({x: faceCx, y: faceCy}, '#7bff4d');
+          drawDebugPoint(armShoulder, '#ffe14d');
+          drawDebugPoint(armElbow, '#4dfff2');
+          drawDebugPoint(armHand, '#ffe14d');
+        }
+      } else if(!okShoulders) {
+        setStatus('어깨가 잘 보이도록 카메라 정면에 서주세요.');
+      } else if(!faceTexture) {
+        setStatus('먼저 이미지를 선택해주세요.');
+      } else {
+        setStatus('귀와 코가 잘 보이도록 카메라 정면에 서주세요.');
+      }
+    } else {
+      setStatus('사람이 잘 인식되지 않아요. 조명을 밝게 하거나 카메라 정면에 서주세요.');
+    }
+
+    ctx.restore();
+  }
+})();
+</script>
