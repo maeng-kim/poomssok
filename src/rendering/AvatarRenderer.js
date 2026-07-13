@@ -117,6 +117,8 @@ export class AvatarRenderer {
           y: Math.min(armShoulder.y, armHand.y) - shoulderDist * 0.28,
         };
 
+        const faceLocalX = outwardDir * faceW * config.FACE_OFFSET;
+
         ctx.save();
         ctx.translate(faceCx, faceCy);
         ctx.rotate(angle);
@@ -124,7 +126,7 @@ export class AvatarRenderer {
         ctx.shadowColor = 'rgba(0,0,0,0.4)';
         ctx.shadowBlur = 20;
         ctx.shadowOffsetY = 6;
-        ctx.drawImage(this.faceTexture, -faceW / 2, -faceH / 2, faceW, faceH);
+        ctx.drawImage(this.faceTexture, -faceW / 2 + faceLocalX, -faceH / 2, faceW, faceH);
         ctx.shadowColor = 'transparent';
         ctx.shadowBlur = 0;
         ctx.shadowOffsetY = 0;

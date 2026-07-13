@@ -11,6 +11,9 @@ export const RENDER_CONFIG = {
   ARM_COLOR: '#e0a15c',
   SHOW_DEBUG: false,
   USE_OCCLUSION: true,
+  // Shifts the face cutout toward the torso's outward offset (in faceW units) so it sits
+  // centered over the illustrated body like a head instead of floating beside it.
+  FACE_OFFSET: 0.18,
 };
 
 // width/height are ideal constraints only - mobile devices often negotiate a different
