@@ -5,9 +5,11 @@ import { PoseTrackingService } from './services/PoseTrackingService.js';
 import { buildFaceTexture } from './domain/FaceTexture.js';
 import { AvatarRenderer } from './rendering/AvatarRenderer.js';
 import { UIController } from './ui/UIController.js';
+import { startClock } from './ui/Clock.js';
 
 (function () {
   const ui = new UIController();
+  startClock(ui.clockEl);
   const faceDetectionService = new FaceDetectionService();
   const backgroundRemovalService = new BackgroundRemovalService();
   const poseTrackingService = new PoseTrackingService(ui.video);

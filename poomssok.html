@@ -4,55 +4,172 @@
 <title>사심가득가득</title>
 <style>
   :root{
-    color-scheme: dark;
-    --bg:#111318; --panel:#1b1e27; --accent:#ff8a5c; --text:#f2f2f5; --muted:#9aa0ac;
+    --xp-blue-1:#1352c8; --xp-blue-2:#2c70e0; --xp-blue-3:#3c84f0; --xp-blue-4:#1a5cd0; --xp-blue-5:#0e3eaa;
+    --win-bg:#ece9d8; --win-border:#0058a0;
   }
   *{box-sizing:border-box;}
+  html,body{height:100%;}
   body{
-    margin:0; background:var(--bg); color:var(--text);
+    margin:0; min-height:100vh; color:#1a1a1a;
     font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
-    padding:10px 16px 10px;
+    background:#0a246a url('assets/bliss.png') center/cover no-repeat fixed;
+    display:flex; flex-direction:column; align-items:center;
+    padding:32px 16px calc(42px + 32px);
+    position:relative; overflow-x:hidden;
   }
-  .app{max-width:640px;margin:0 auto;}
-  h1{font-size:22px;margin:0 0 4px;}
-  h1 + p{color:var(--muted);margin-top:0;font-size:14px;}
-  .panel{
-    background:var(--panel); border-radius:16px; padding:18px;
-    margin-bottom:18px; border:1px solid #2a2e3a;
-    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+
+  @keyframes bob{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+  .heart{
+    position:fixed; pointer-events:none; font-size:38px; line-height:1; user-select:none;
+    animation:bob 3s ease-in-out infinite; filter:drop-shadow(1px 3px 4px rgba(0,0,0,.35)); z-index:1;
   }
-  .picker{
-    background:var(--accent); color:#1b1200; border:none; border-radius:10px;
-    padding:10px 16px; font-size:14px; font-weight:600; cursor:pointer; display:inline-block;
+  @media (max-width:720px){ .heart{display:none;} }
+
+  .window{
+    position:relative; z-index:2; width:100%; max-width:620px;
+    border-radius:8px 8px 4px 4px; overflow:hidden;
+    box-shadow:4px 4px 20px rgba(0,0,0,.65), 0 0 0 1px rgba(60,120,240,.4);
   }
-  .stage{
-    position:relative; width:100%; max-width:640px; margin:0 auto;
-    border-radius:14px; overflow:hidden; background:#000;
+  .titlebar{
+    height:30px; display:flex; align-items:center; gap:6px; padding:0 4px 0 8px; user-select:none;
+    background:linear-gradient(180deg, var(--xp-blue-1) 0%, var(--xp-blue-2) 28%, var(--xp-blue-3) 48%, var(--xp-blue-4) 68%, var(--xp-blue-5) 100%);
   }
+  .titlebar span{
+    color:#fff; font-family:'Courier New',Tahoma,monospace; font-size:13px; font-weight:bold; flex:1;
+    letter-spacing:.06em; text-shadow:1px 1px 3px rgba(0,0,0,.55);
+  }
+  .titlebar .btns{display:flex; gap:3px;}
+  .titlebar button{width:22px; height:21px; border-radius:3px; padding:0; cursor:default; line-height:1; font-family:Tahoma,sans-serif; color:#fff;}
+  .titlebar .min, .titlebar .max{border:1px solid #1050aa; background:linear-gradient(180deg,#68b8fc 0%,#3c8ef0 50%,#1e6ee0 100%); font-size:12px; font-weight:bold;}
+  .titlebar .close{border:1px solid #8a1010; background:linear-gradient(180deg,#f87070 0%,#e83838 50%,#c01818 100%); font-size:13px; font-weight:bold;}
+
+  .menubar{
+    height:22px; background:var(--win-bg); border-bottom:1px solid #aca89c;
+    display:flex; align-items:center; padding:0 4px; gap:2px;
+  }
+  .menubar span{padding:2px 8px; font-family:Tahoma,sans-serif; font-size:12px; color:#1a1a1a;}
+
+  .content{background:#fff; padding:36px 32px 28px; text-align:center;}
+  .content h1{font-family:'Courier New',Tahoma,monospace; font-size:38px; font-weight:900; color:#1a1a28; margin:0 0 8px; letter-spacing:.03em;}
+  .tagline{font-family:Tahoma,'Noto Sans KR',sans-serif; font-size:12px; color:#aaa; margin:0 0 8px; letter-spacing:.04em;}
+  .desc{font-family:'Noto Sans KR',Tahoma,sans-serif; font-size:15px; color:#555; margin:0 0 28px; line-height:1.7;}
+
+  .field{
+    width:140px; padding:8px 10px; font-family:Tahoma,'Noto Sans KR',sans-serif; font-size:13px;
+    border:1px solid #7f9db9; border-radius:2px; background:#fff; color:#1a1a1a;
+    box-shadow:inset 1px 1px 2px rgba(0,0,0,.15);
+  }
+  .xp-btn{
+    padding:8px 40px; font-family:Tahoma,'Noto Sans KR',sans-serif; font-size:14px; color:#1a1a1a;
+    background:linear-gradient(180deg,#f4f1e8 0%,#d8d4c8 100%);
+    border:2px solid var(--win-border); border-radius:3px; cursor:pointer; letter-spacing:.02em;
+    box-shadow:inset 1px 1px 0 rgba(255,255,255,.9), inset -1px -1px 0 rgba(0,0,0,.12), 2px 3px 6px rgba(0,0,0,.22);
+    display:inline-block;
+  }
+  .xp-btn:hover{background:linear-gradient(180deg,#dce8fc 0%,#b8cef4 100%); border-color:#0050c0;}
+  .xp-btn:active{box-shadow:inset 1px 1px 3px rgba(0,0,0,.2); transform:translateY(1px);}
+
+  .controls{display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:12px; margin-bottom:6px;}
+  .status{color:#888; font-size:12px; margin:10px 0 0; font-family:Tahoma,'Noto Sans KR',sans-serif;}
+
+  .stage{position:relative; width:100%; margin:20px auto 0; border-radius:6px; overflow:hidden; background:#000;}
   .stage[hidden]{display:none;}
   .stage video{display:none;}
   /* height:auto lets the canvas keep whatever aspect ratio the camera stream actually
      negotiates (varies by device/orientation) instead of being stretched into a fixed box */
   .stage canvas{width:100%; height:auto; display:block;}
-  .status{color:var(--muted); font-size:13px; margin:0;}
+
+  .taskbar{
+    position:fixed; left:0; right:0; bottom:0; height:42px; z-index:10;
+    background:linear-gradient(180deg,#1e4ea8 0%,#0e2e80 45%,#0a246a 100%);
+    border-top:2px solid #3a7adc; display:flex; align-items:center; padding:0 5px; gap:4px;
+  }
+  .start-btn{
+    height:36px; padding:0 14px 0 6px; display:flex; align-items:center; gap:6px;
+    background:linear-gradient(180deg,#60cc50 0%,#30a828 30%,#229020 65%,#44be34 100%);
+    border:1px solid #187010; border-radius:0 18px 18px 0; color:#fff;
+    font-family:Tahoma,sans-serif; font-size:13px; font-weight:bold; cursor:default;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.28), 2px 1px 5px rgba(0,0,0,.45);
+  }
+  .taskbar .sep{width:1px; height:32px; background:rgba(255,255,255,.14); margin:0 3px;}
+  .task-chip{
+    height:30px; padding:0 12px; min-width:120px; background:linear-gradient(180deg,#2c5ad4 0%,#1a3ea4 100%);
+    border:1px solid #0a2880; border-top:1px solid #4a80f0; color:#fff; font-family:Tahoma,sans-serif; font-size:11px;
+    border-radius:2px; display:flex; align-items:center; gap:6px; cursor:default;
+  }
+  .tray{
+    height:32px; padding:0 10px; display:flex; align-items:center; gap:9px; margin-left:auto;
+    background:rgba(8,28,96,.7); border:1px solid rgba(60,120,220,.4);
+    font-family:Tahoma,sans-serif; font-size:12px; color:#fff; border-radius:1px;
+  }
+  #clock{font-size:11px; color:#d8eaff;}
+
+  /* Mobile: the window goes fullscreen (like a maximized XP window) instead of floating
+     as a small card over the wallpaper, and the taskbar chrome shrinks to fit. */
+  @media (max-width:700px){
+    body{padding:0 0 42px; align-items:stretch;}
+    .window{
+      width:100%; max-width:none; min-height:calc(100vh - 42px);
+      border-radius:0; box-shadow:none; display:flex; flex-direction:column;
+    }
+    .content{flex:1; display:flex; flex-direction:column; justify-content:center; padding:28px 18px 22px;}
+    .content h1{font-size:30px;}
+    .xp-btn{padding:8px 26px;}
+
+    .titlebar button{width:20px; height:19px;}
+    .start-btn{padding:0 10px 0 5px; font-size:12px; gap:4px;}
+    .start-btn span{font-size:17px !important;}
+    .task-chip{min-width:0; padding:0 8px; font-size:10px;}
+    .tray{padding:0 7px; gap:6px;}
+  }
 </style>
 
-<div class="app">
-  <h1>내사심가득채워만들엇다.</h1>
-  <p>왜요나도안겨보고싶엇다구요.</p>
+<div class="heart" style="top:8vh; left:6vw; animation-delay:.2s;">💖</div>
+<div class="heart" style="top:14vh; right:8vw; animation-delay:1s;">🍀</div>
+<div class="heart" style="bottom:24vh; left:9vw; animation-delay:.6s;">🧚</div>
+<div class="heart" style="bottom:26vh; right:11vw; animation-delay:1.4s;">🥽</div>
 
-  <div class="panel">
-    <label class="picker" for="fileInput">이미지 선택</label>
-    <input type="file" id="fileInput" accept="image/*" hidden>
-    <input type="text" id="nameInput" maxlength="2" placeholder="이름 2글자" style="width:90px;padding:10px 12px;border-radius:10px;border:1px solid #2a2e3a;background:#12141b;color:var(--text);font-size:14px;">
+<div class="window">
+  <div class="titlebar">
+    <span>POOMSSOK</span>
+    <div class="btns">
+      <button class="min">─</button>
+      <button class="max">□</button>
+      <button class="close">✕</button>
+    </div>
+  </div>
+  <div class="menubar">
+    <span>파일(F)</span>
+    <span>도움말(H)</span>
+  </div>
+
+  <div class="content">
+    <h1>POOMSSOK</h1>
+    <p class="tagline">내사심가득채워만들엇다</p>
+    <p class="desc">왜요나도안겨보고싶엇다구요</p>
+
+    <div class="controls">
+      <label class="xp-btn" for="fileInput">이미지 선택</label>
+      <input type="file" id="fileInput" accept="image/*" hidden>
+      <input type="text" id="nameInput" class="field" maxlength="2" placeholder="이름 2글자">
+    </div>
     <p class="status" id="pickStatus"></p>
-  </div>
 
-  <div class="stage" id="stage" hidden>
-    <video id="video" playsinline autoplay muted></video>
-    <canvas id="output"></canvas>
+    <div class="stage" id="stage" hidden>
+      <video id="video" playsinline autoplay muted></video>
+      <canvas id="output"></canvas>
+    </div>
+    <p class="status" id="status"></p>
   </div>
-  <p class="status" id="status"></p>
+</div>
+
+<div class="taskbar">
+  <button class="start-btn"><span style="font-size:20px;line-height:1;">🪟</span>시작</button>
+  <div class="sep"></div>
+  <div class="task-chip"><span style="font-family:'Courier New',monospace; letter-spacing:.04em;">POOMSSOK</span></div>
+  <div class="tray">
+    <span>🔊</span><span>🌐</span><span id="clock"></span>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js" crossorigin="anonymous"></script>

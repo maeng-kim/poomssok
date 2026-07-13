@@ -9,6 +9,7 @@ export class UIController {
     this.video = document.getElementById('video');
     this.canvas = document.getElementById('output');
     this.statusEl = document.getElementById('status');
+    this.clockEl = document.getElementById('clock');
 
     this.userName = '';
     this._onNameChange = null;
