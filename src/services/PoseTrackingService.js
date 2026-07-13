@@ -30,6 +30,7 @@ export class PoseTrackingService {
         onFrame: async () => { await pose.send({ image: this._video }); },
         width: CAMERA_CONFIG.width,
         height: CAMERA_CONFIG.height,
+        facingMode: CAMERA_CONFIG.facingMode,
       });
       await this._camera.start();
     } catch (err) {

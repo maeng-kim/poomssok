@@ -13,4 +13,6 @@ export const RENDER_CONFIG = {
   USE_OCCLUSION: true,
 };
 
-export const CAMERA_CONFIG = { width: 960, height: 720 };
+// width/height are ideal constraints only - mobile devices often negotiate a different
+// aspect ratio (e.g. portrait sensors), which the .stage/canvas CSS now adapts to.
+export const CAMERA_CONFIG = { width: 960, height: 720, facingMode: 'user' };
