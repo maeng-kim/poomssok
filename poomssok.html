@@ -74,7 +74,10 @@
 
   .stage{position:relative; width:100%; margin:20px auto 0; border-radius:6px; overflow:hidden; background:#000;}
   .stage[hidden]{display:none;}
-  .stage video{display:none;}
+  /* Not display:none: iOS Safari stops decoding <video> frames when it's display:none
+     or visibility:hidden, which silently breaks MediaPipe's Camera frame loop (the
+     camera *stream* starts fine, but no frames ever reach Pose, so nothing renders). */
+  .stage video{position:absolute; width:1px; height:1px; opacity:0; pointer-events:none;}
   /* height:auto lets the canvas keep whatever aspect ratio the camera stream actually
      negotiates (varies by device/orientation) instead of being stretched into a fixed box */
   .stage canvas{width:100%; height:auto; display:block;}
