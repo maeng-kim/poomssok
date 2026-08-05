@@ -23,7 +23,9 @@
     position:fixed; pointer-events:none; font-size:38px; line-height:1; user-select:none;
     animation:bob 3s ease-in-out infinite; filter:drop-shadow(1px 3px 4px rgba(0,0,0,.35)); z-index:1;
   }
-  @media (max-width:720px){ .heart{display:none;} }
+  /* Mobile: the window goes fullscreen and would otherwise cover the hearts entirely,
+     so float them above it instead of hiding them, and shrink them a bit to fit. */
+  @media (max-width:720px){ .heart{z-index:3; font-size:26px;} }
 
   .window{
     position:relative; z-index:2; width:100%; max-width:620px;
@@ -111,10 +113,13 @@
   /* Mobile: the window goes fullscreen (like a maximized XP window) instead of floating
      as a small card over the wallpaper, and the taskbar chrome shrinks to fit. */
   @media (max-width:700px){
-    body{padding:0 0 42px; align-items:stretch;}
+    html,body{height:100%; overflow:hidden;}
+    body{padding:55px 20px calc(42px + 120px); align-items:stretch;}
     .window{
-      width:100%; max-width:none; min-height:calc(100vh - 42px);
-      border-radius:0; box-shadow:none; display:flex; flex-direction:column;
+      width:100%; max-width:none; min-height:calc(100vh - 42px - 210px);
+      border-radius:8px 8px 4px 4px;
+      box-shadow:4px 4px 20px rgba(0,0,0,.65), 0 0 0 1px rgba(60,120,240,.4);
+      display:flex; flex-direction:column;
     }
     .content{flex:1; display:flex; flex-direction:column; justify-content:center; padding:28px 18px 22px;}
     .content h1{font-size:30px;}
@@ -128,7 +133,7 @@
   }
 </style>
 
-<div class="heart" style="top:8vh; left:6vw; animation-delay:.2s;">💖</div>
+<div class="heart" style="top:20vh; left:10vw; animation-delay:.2s;">💖</div>
 <div class="heart" style="top:14vh; right:8vw; animation-delay:1s;">🍀</div>
 <div class="heart" style="bottom:24vh; left:9vw; animation-delay:.6s;">🧚</div>
 <div class="heart" style="bottom:26vh; right:11vw; animation-delay:1.4s;">🥽</div>

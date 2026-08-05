@@ -29,7 +29,7 @@ browser, using your webcam.
 ## Project structure
 
 ```
-poomssok.html              markup + styles + <script type="module"> entry point
+index.html                 markup + styles + <script type="module"> entry point
 src/
   config.js                CDN locators, render constants, camera constraints
   main.js                  orchestrator - wires UI, services, and renderer together
