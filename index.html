@@ -35,11 +35,12 @@
   }
   .egg-credit{
     position:fixed; font-family:Tahoma,'Noto Sans KR',sans-serif; font-size:12px; color:#fff;
-    background:rgba(10,30,90,.9); padding:5px 10px; border-radius:4px; white-space:nowrap;
-    opacity:0; transform:translateY(4px); pointer-events:none; z-index:4;
+    text-decoration:none; background:rgba(10,30,90,.9); padding:5px 10px; border-radius:4px;
+    white-space:nowrap; opacity:0; transform:translateY(4px); pointer-events:none; z-index:4;
     box-shadow:0 2px 8px rgba(0,0,0,.35); transition:opacity .25s ease, transform .25s ease;
   }
-  .egg-credit.show{opacity:1; transform:translateY(0);}
+  .egg-credit.show{opacity:1; transform:translateY(0); pointer-events:auto;}
+  .egg-credit:hover{text-decoration:underline;}
   @media (max-width:720px){ .egg{z-index:5; font-size:24px;} .egg-credit{z-index:6;} }
 
   .window{
@@ -153,7 +154,7 @@
 <div class="heart" style="bottom:24vh; left:9vw; animation-delay:.6s;">🧚</div>
 <div class="heart" style="bottom:26vh; right:11vw; animation-delay:1.4s;">🥽</div>
 <button type="button" class="egg" id="eggBtn" style="top:13vh; left:20vw; animation-delay:.4s;" aria-label="secret">🐯</button>
-<span class="egg-credit" id="eggCredit" style="top:calc(5vh + 38px); left:5vw;">made by maeng-kim</span>
+<a class="egg-credit" id="eggCredit" href="https://github.com/maeng-kim" target="_blank" rel="noopener" style="top:calc(5vh + 38px); left:5vw;">made by maeng-kim</a>
 
 <div class="window">
   <div class="titlebar">
