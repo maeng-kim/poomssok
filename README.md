@@ -1,6 +1,6 @@
 # poomssok
 
-For Minji, who forgot to sign up for the 사녹공방 event — a fan-run commission
+For my co-worker, who forgot to sign up for the k-pop idol's event — a fan-run commission
 service where someone manually photo-edits a fan's face onto a hugging pose
 with their favorite idol. This app recreates that effect live, in the
 browser, using your webcam.
