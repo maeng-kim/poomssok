@@ -75,6 +75,7 @@ export class AvatarRenderer {
         const shoulderDist = dist(shoulderL, shoulderR);
         const shoulderMid = mid(shoulderL, shoulderR);
         const armColor = config.ARM_COLOR;
+        const shirtColor = config.SHIRT_COLOR;
 
         const flip = config.FLIP_SIDE;
         const anchorShoulder = flip ? shoulderL : shoulderR;
@@ -110,19 +111,30 @@ export class AvatarRenderer {
         };
         const armHand = {
           x: targetShoulder.x,
-          y: targetShoulder.y - shoulderDist * 0.05,
+          y: targetShoulder.y - shoulderDist * 0.005,
         };
         const armElbow = {
           x: (armShoulder.x + armHand.x) / 2,
-          y: Math.min(armShoulder.y, armHand.y) - shoulderDist * 0.28,
+          y: Math.min(armShoulder.y, armHand.y) - shoulderDist * 0.1,
         };
+
+        // The illustrated character's other arm, resting straight down at their side (on
+        // the outward shoulder, away from the hugging arm) - not pose-driven, so it's
+        // always visible and keeps the shirt reading as short-sleeved even when the
+        // hugging arm is out of frame.
+        const restShoulder = {
+          x: faceCx + torsoLocalX + outwardDir * torsoW * 0.42,
+          y: faceCy + torsoTopY + torsoH * 0.32,
+        };
+        const restElbow = { x: restShoulder.x, y: restShoulder.y + torsoH * 0.45 };
+        const restHand = { x: restShoulder.x, y: restShoulder.y + torsoH * 0.85 };
 
         const faceLocalX = outwardDir * faceW * config.FACE_OFFSET;
 
         ctx.save();
         ctx.translate(faceCx, faceCy);
         ctx.rotate(angle);
-        drawDomeTorso(ctx, torsoLocalX, torsoTopY, torsoW, torsoH, armColor);
+        drawDomeTorso(ctx, torsoLocalX, torsoTopY, torsoW, torsoH, shirtColor);
         ctx.shadowColor = 'rgba(0,0,0,0.4)';
         ctx.shadowBlur = 20;
         ctx.shadowOffsetY = 6;
@@ -151,23 +163,27 @@ export class AvatarRenderer {
           const heartWidth = ctx.measureText(heartPart).width;
           const line1Width = iWidth + heartWidth;
           ctx.textAlign = 'left';
-          ctx.fillStyle = '#ffffff';
+          ctx.fillStyle = '#000000';
           ctx.fillText(iPart, -line1Width / 2, -lineGap / 2);
           ctx.fillStyle = '#ff2d2d';
           ctx.fillText(heartPart, -line1Width / 2 + iWidth, -lineGap / 2);
 
           // line 2: the username, centered
           ctx.textAlign = 'center';
-          ctx.fillStyle = '#ffffff';
+          ctx.fillStyle = '#000000';
           ctx.fillText(this.userName, 0, lineGap / 2);
           ctx.restore();
         }
 
         ctx.restore();
 
-        drawTaperedSegment(ctx, armShoulder, armWidth * 0.5, armElbow, armWidth * 0.4, armColor);
+        drawTaperedSegment(ctx, armShoulder, armWidth * 0.5, armElbow, armWidth * 0.4, shirtColor);
         drawTaperedSegment(ctx, armElbow, armWidth * 0.4, armHand, armWidth * 0.32, armColor);
         drawHand(ctx, armHand, armElbow, armWidth * 0.85, armColor);
+
+        drawTaperedSegment(ctx, restShoulder, armWidth * 0.5, restElbow, armWidth * 0.4, shirtColor);
+        drawTaperedSegment(ctx, restElbow, armWidth * 0.4, restHand, armWidth * 0.32, armColor);
+        drawHand(ctx, restHand, restElbow, armWidth * 0.85, armColor, true);
 
         if (useOcclusion) {
           if (this._maskCanvas.width !== w || this._maskCanvas.height !== h) {

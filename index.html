@@ -19,29 +19,26 @@
   }
 
   @keyframes bob{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+  /* Every floating emoji doubles as an easter egg button: clicking one reveals a credit
+     link positioned right below that same emoji. */
   .heart{
-    position:fixed; pointer-events:none; font-size:38px; line-height:1; user-select:none;
+    position:fixed; font-size:38px; line-height:1; user-select:none; cursor:pointer;
+    background:none; border:none; padding:0; -webkit-tap-highlight-color:transparent;
     animation:bob 3s ease-in-out infinite; filter:drop-shadow(1px 3px 4px rgba(0,0,0,.35)); z-index:1;
   }
   /* Mobile: the window goes fullscreen and would otherwise cover the hearts entirely,
      so float them above it instead of hiding them, and shrink them a bit to fit. */
   @media (max-width:720px){ .heart{z-index:3; font-size:26px;} }
 
-  /* Easter egg: a tiny hidden credit, same floating style as the hearts but clickable. */
-  .egg{
-    position:fixed; font-size:32px; line-height:1; user-select:none; cursor:pointer;
-    background:none; border:none; padding:0; -webkit-tap-highlight-color:transparent;
-    animation:bob 3s ease-in-out infinite; filter:drop-shadow(1px 3px 4px rgba(0,0,0,.35)); z-index:2;
-  }
   .egg-credit{
-    position:fixed; font-family:Tahoma,'Noto Sans KR',sans-serif; font-size:12px; color:#fff;
-    text-decoration:none; background:rgba(10,30,90,.9); padding:5px 10px; border-radius:4px;
-    white-space:nowrap; opacity:0; transform:translateY(4px); pointer-events:none; z-index:4;
+    position:fixed; font-family:Tahoma,'Noto Sans KR',sans-serif; font-size:12px; color:#fff; text-decoration:none;
+    background:rgba(10,30,90,.9); padding:5px 10px; border-radius:4px; white-space:nowrap;
+    opacity:0; transform:translateY(4px); pointer-events:none; z-index:4;
     box-shadow:0 2px 8px rgba(0,0,0,.35); transition:opacity .25s ease, transform .25s ease;
   }
   .egg-credit.show{opacity:1; transform:translateY(0); pointer-events:auto;}
   .egg-credit:hover{text-decoration:underline;}
-  @media (max-width:720px){ .egg{z-index:5; font-size:24px;} .egg-credit{z-index:6;} }
+  @media (max-width:720px){ .egg-credit{z-index:6;} }
 
   .window{
     position:relative; z-index:2; width:100%; max-width:620px;
@@ -149,12 +146,20 @@
   }
 </style>
 
-<div class="heart" style="top:20vh; left:10vw; animation-delay:.2s;">💖</div>
-<div class="heart" style="top:14vh; right:8vw; animation-delay:1s;">🍀</div>
-<div class="heart" style="bottom:24vh; left:9vw; animation-delay:.6s;">🧚</div>
-<div class="heart" style="bottom:26vh; right:11vw; animation-delay:1.4s;">🥽</div>
-<button type="button" class="egg" id="eggBtn" style="top:13vh; left:20vw; animation-delay:.4s;" aria-label="secret">🐯</button>
-<a class="egg-credit" id="eggCredit" href="https://github.com/maeng-kim" target="_blank" rel="noopener" style="top:calc(5vh + 38px); left:5vw;">made by maeng-kim</a>
+<button type="button" class="heart" style="top:20vh; left:10vw; animation-delay:.2s;" aria-label="secret">💖</button>
+<a class="egg-credit" href="https://github.com/maeng-kim" target="_blank" rel="noopener" style="top:calc(20vh + 38px); left:10vw;">made by maeng-kim</a>
+
+<button type="button" class="heart" style="top:14vh; right:8vw; animation-delay:1s;" aria-label="secret">🍀</button>
+<a class="egg-credit" href="https://github.com/maeng-kim" target="_blank" rel="noopener" style="top:calc(14vh + 38px); right:8vw;">made by maeng-kim</a>
+
+<button type="button" class="heart" style="bottom:24vh; left:9vw; animation-delay:.6s;" aria-label="secret">🧚</button>
+<a class="egg-credit" href="https://github.com/maeng-kim" target="_blank" rel="noopener" style="bottom:calc(24vh - 34px); left:9vw;">made by maeng-kim</a>
+
+<button type="button" class="heart" style="bottom:26vh; right:11vw; animation-delay:1.4s;" aria-label="secret">🥽</button>
+<a class="egg-credit" href="https://github.com/maeng-kim" target="_blank" rel="noopener" style="bottom:calc(26vh - 34px); right:11vw;">made by maeng-kim</a>
+
+<button type="button" class="heart" style="top:13vh; left:20vw; animation-delay:.4s;" aria-label="secret">🐯</button>
+<a class="egg-credit" href="https://github.com/maeng-kim" target="_blank" rel="noopener" style="top:calc(13vh + 38px); left:20vw;">made by maeng-kim</a>
 
 <div class="window">
   <div class="titlebar">
@@ -213,13 +218,14 @@
 
 <script>
   (function () {
-    var btn = document.getElementById('eggBtn');
-    var credit = document.getElementById('eggCredit');
-    var hideTimer;
-    btn.addEventListener('click', function () {
-      credit.classList.add('show');
-      clearTimeout(hideTimer);
-      hideTimer = setTimeout(function () { credit.classList.remove('show'); }, 2500);
+    document.querySelectorAll('.heart').forEach(function (btn) {
+      var credit = btn.nextElementSibling;
+      var hideTimer;
+      btn.addEventListener('click', function () {
+        credit.classList.add('show');
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(function () { credit.classList.remove('show'); }, 2500);
+      });
     });
   })();
 </script>

@@ -9,6 +9,8 @@ export const RENDER_CONFIG = {
   FLIP_SIDE: false,
   ARM_WIDTH: 34,
   ARM_COLOR: '#e0a15c',
+  // Short-sleeve shirt: covers the torso and upper arm only, forearm/hand stay skin-toned.
+  SHIRT_COLOR: '#ffffff',
   SHOW_DEBUG: false,
   USE_OCCLUSION: true,
   // Shifts the face cutout toward the torso's outward offset (in faceW units) so it sits

@@ -28,11 +28,13 @@ export function drawTaperedSegment(ctx, p0, r0, p1, r1, color) {
 }
 
 // A simple hand: a palm blob plus a few curled "finger" strokes, oriented along the forearm.
-export function drawHand(ctx, wrist, fromPt, size, color) {
+// Pass flip:true to mirror it across the forearm axis (e.g. so the palm faces the other way).
+export function drawHand(ctx, wrist, fromPt, size, color, flip) {
   const angle = Math.atan2(wrist.y - fromPt.y, wrist.x - fromPt.x);
   ctx.save();
   ctx.translate(wrist.x, wrist.y);
   ctx.rotate(angle);
+  if (flip) ctx.scale(1, -1);
   ctx.fillStyle = color;
   ctx.beginPath();
   ctx.ellipse(size * 0.25, 0, size * 0.95, size * 0.62, 0, 0, Math.PI * 2);
@@ -49,12 +51,20 @@ export function drawHand(ctx, wrist, fromPt, size, color) {
   ctx.restore();
 }
 
-// Simple flat-illustration torso: a rounded "dome" shoulder line on top, straight sides below.
+// Flat-illustration t-shirt torso: full-width shoulders with a round-neck scoop curving
+// down into the top-center (instead of a plain dome or a separate collar ring), straight
+// sides below down to the hem.
 export function drawDomeTorso(ctx, cx, topY, w, h, color) {
   const r = w / 2;
+  const neckW = w * 0.16;          // half-width of the neck opening at its narrowest (top)
+  const shoulderDrop = h * 0.05;   // shoulders sit slightly below the garment's highest point
+  const neckDipY = topY + h * 0.16; // how far the scoop dips down at center
+
   ctx.beginPath();
-  ctx.moveTo(cx - r, topY + r);
-  ctx.arc(cx, topY + r, r, Math.PI, 0, false);
+  ctx.moveTo(cx - r, topY + shoulderDrop);
+  ctx.lineTo(cx - neckW, topY);
+  ctx.quadraticCurveTo(cx, neckDipY, cx + neckW, topY);
+  ctx.lineTo(cx + r, topY + shoulderDrop);
   ctx.lineTo(cx + r, topY + h);
   ctx.lineTo(cx - r, topY + h);
   ctx.closePath();
